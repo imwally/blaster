@@ -3,11 +3,23 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"github.com/dhowden/tag"
 )
+
+// Artist holds an artist's name.
+type Artist struct {
+	Name string
+}
+
+// Album holds an album's title, artist name, and tracks.
+type Album struct {
+	Title  string
+	Artist string
+	Tracks []*Track
+}
 
 // Track holds the meta data and path to a a track.
 type Track struct {
@@ -23,20 +35,62 @@ type Track struct {
 	TrackTotal  int
 	DiscNumber  int
 	DiscTotal   int
-	Lyrics string
-	Path   string
+	Lyrics      string
+	Path        string
+}
+
+// Artists returns a slice of unique artists from a slice of Tracks.
+func Artists(tracks []*Track) []*Artist {
+	artists := make(map[string]*Artist)
+	for _, track := range tracks {
+		artists[track.Artist] = &Artist{
+			Name: track.Artist,
+		}
+	}
+
+	var uniqueArtists []*Artist
+	for _, artist := range artists {
+		uniqueArtists = append(uniqueArtists, artist)
+	}
+
+	return uniqueArtists
+}
+
+// Albums returns a slice of unique albums from an artist. If artist
+// is nil all albums are returned.
+func Albums(tracks []*Track, artist *Artist) []*Album {
+	albums := make(map[string]*Album)
+	for _, track := range tracks {
+		albums[track.Album] = &Album{
+			Title:  track.Album,
+			Artist: track.Artist,
+		}
+		albums[track.Album].Tracks = append(albums[track.Album].Tracks, track)
+	}
+
+	var uniqueAlbums []*Album
+	for _, album := range albums {
+		if artist != nil {
+			if artist.Name == album.Artist {
+				uniqueAlbums = append(uniqueAlbums, album)
+			}
+		} else {
+			uniqueAlbums = append(uniqueAlbums, album)
+		}
+	}
+
+	return uniqueAlbums
 }
 
 // NewTrack attempts to read the meta data from a file into a Track
 // structure. The string "Uknown" will be used in place of a blank
 // artist or album field.
 func NewTrack(path string) (*Track, error) {
-	log.Println(path)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	m, err := tag.ReadFrom(f)
 	if err != nil {
 		return nil, err
@@ -46,7 +100,7 @@ func NewTrack(path string) (*Track, error) {
 	if title == "" {
 		title = "Untitled"
 	}
-	
+
 	artist := m.Artist()
 	if artist == "" {
 		artist = "Unknown"
@@ -54,7 +108,7 @@ func NewTrack(path string) (*Track, error) {
 
 	album := m.Album()
 	if album == "" {
-		album = "Uknown"
+		album = "Unknown"
 	}
 
 	trackNumber, trackTotal := m.Track()
@@ -82,7 +136,7 @@ func NewTrack(path string) (*Track, error) {
 
 // ScanForTracks scans a path for files containing valid meta tag
 // information. Valid meta tag formats are ID3, MP4, and Vorbis. It
-// returns a slice of pointers to a Song.
+// returns a slice of pointers to a Track.
 func ScanForTracks(path string) ([]*Track, error) {
 	var tracks []*Track
 
