@@ -6,55 +6,38 @@ import (
 )
 
 func main() {
-
-	db := "./library"
-	
 	if len(os.Args) < 2 {
 		return
 	}
 
-	var appdb appDB
-	err := appdb.Open(db)
+	tracks, err := ScanForTracks(os.Args[1])
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
-	defer appdb.Close()
-	
-	cmd := os.Args[1]
-	if cmd == "scan" {
-		err := appdb.Initialize(db)
-		if err != nil {
-			fmt.Println(err)
-		}
-		
-		tracks, err := ScanForTracks(os.Args[2])
-		if err != nil {
-			fmt.Println(err)
-		}
 
-		for _, track := range tracks {
-			err = appdb.AddTrack(track)
-			if err != nil {
-				fmt.Println(err)
+	cmd := os.Args[2]
+
+	if cmd == "artists" {
+		artists := Artists(tracks)
+		for _, artist := range artists {
+			fmt.Println(artist.Name)
+		}
+	}
+
+	if cmd == "albums" {
+		albums := Albums(tracks, nil)
+		for _, album := range albums {
+			fmt.Printf("%s - %s\n", album.Artist, album.Title)
+		}
+	}
+
+	if cmd == "albumsby" {
+		albums := Albums(tracks, &Artist{os.Args[3]})
+		for _, album := range albums {
+			fmt.Printf("%s - %s\n", album.Artist, album.Title)
+			for _, track := range album.Tracks {
+				fmt.Printf("\t%d %s\n", track.TrackNumber, track.Title)
 			}
 		}
-		
-	}
-
-	if cmd == "byalbum" {
-		tracks, err := appdb.Query("Album", os.Args[2])
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(tracks)
-	}
-
-	if cmd == "byartist" {
-		tracks, err := appdb.Query("Artist", os.Args[2])
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(tracks)
 	}
 }
