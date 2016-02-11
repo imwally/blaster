@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -8,6 +9,13 @@ import (
 
 	"github.com/dhowden/tag"
 )
+
+// Library is the entry point to all artists, albums and tracks.
+type Library struct {
+	Artists []*Artist
+	Albums  []*Album
+	Tracks  []*Track
+}
 
 // Artist holds an artist's name.
 type Artist struct {
@@ -39,6 +47,13 @@ type Track struct {
 	Path        string
 }
 
+// Generate reads all artists, albums and tracks into the Library.
+func (l *Library) Generate(tracks []*Track) {
+	l.Artists = Artists(tracks)
+	l.Albums = Albums(tracks)
+	l.Tracks = tracks
+}
+
 // Artists returns a slice of unique artists from a slice of Tracks.
 func Artists(tracks []*Track) []*Artist {
 	artists := make(map[string]*Artist)
@@ -58,25 +73,21 @@ func Artists(tracks []*Track) []*Artist {
 
 // Albums returns a slice of unique albums from an artist. If artist
 // is nil all albums are returned.
-func Albums(tracks []*Track, artist *Artist) []*Album {
+func Albums(tracks []*Track) []*Album {
 	albums := make(map[string]*Album)
+	albumTracks := make(map[string][]*Track)
 	for _, track := range tracks {
+		albumTracks[track.Album] = append(albumTracks[track.Album], track)
 		albums[track.Album] = &Album{
 			Title:  track.Album,
 			Artist: track.Artist,
 		}
-		albums[track.Album].Tracks = append(albums[track.Album].Tracks, track)
 	}
 
 	var uniqueAlbums []*Album
 	for _, album := range albums {
-		if artist != nil {
-			if artist.Name == album.Artist {
-				uniqueAlbums = append(uniqueAlbums, album)
-			}
-		} else {
-			uniqueAlbums = append(uniqueAlbums, album)
-		}
+		album.Tracks = albumTracks[album.Title]
+		uniqueAlbums = append(uniqueAlbums, album)
 	}
 
 	return uniqueAlbums
@@ -108,8 +119,10 @@ func NewTrack(path string) (*Track, error) {
 
 	album := m.Album()
 	if album == "" {
-		album = "Unknown"
+		album = "Untitled"
 	}
+
+	fmt.Printf(" Adding: %s - %s\r", artist, title)
 
 	trackNumber, trackTotal := m.Track()
 	discNumber, discTotal := m.Disc()
