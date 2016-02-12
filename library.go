@@ -48,10 +48,25 @@ type Track struct {
 }
 
 // Generate reads all artists, albums and tracks into the Library.
-func (l *Library) Generate(tracks []*Track) {
+func Generate(tracks []*Track) *Library {
+	l := new(Library)
 	l.Artists = Artists(tracks)
 	l.Albums = Albums(tracks)
 	l.Tracks = tracks
+
+	return l
+}
+
+// AlbumsBy returns all albums by a specific artist.
+func (l *Library) AlbumsBy(artist string) []*Album {
+	var albums []*Album
+	for _, album := range l.Albums {
+		if album.Artist == artist {
+			albums = append(albums, album)
+		}
+	}
+
+	return albums
 }
 
 // Artists returns a slice of unique artists from a slice of Tracks.
@@ -71,22 +86,23 @@ func Artists(tracks []*Track) []*Artist {
 	return uniqueArtists
 }
 
-// Albums returns a slice of unique albums from an artist. If artist
-// is nil all albums are returned.
+// Albums returns a slice of unique albums from a slice of Tracks.
 func Albums(tracks []*Track) []*Album {
 	albums := make(map[string]*Album)
 	albumTracks := make(map[string][]*Track)
+
+	// Add tracks to album
 	for _, track := range tracks {
 		albumTracks[track.Album] = append(albumTracks[track.Album], track)
 		albums[track.Album] = &Album{
 			Title:  track.Album,
 			Artist: track.Artist,
 		}
+		albums[track.Album].Tracks = albumTracks[track.Album]
 	}
 
 	var uniqueAlbums []*Album
 	for _, album := range albums {
-		album.Tracks = albumTracks[album.Title]
 		uniqueAlbums = append(uniqueAlbums, album)
 	}
 
@@ -94,8 +110,9 @@ func Albums(tracks []*Track) []*Album {
 }
 
 // NewTrack attempts to read the meta data from a file into a Track
-// structure. The string "Uknown" will be used in place of a blank
-// artist or album field.
+// structure. The string "Unknown" will be used in place of a blank
+// artist name and "Untitled" in place of blank album and track
+// titles.
 func NewTrack(path string) (*Track, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -107,14 +124,14 @@ func NewTrack(path string) (*Track, error) {
 		return nil, err
 	}
 
-	title := m.Title()
-	if title == "" {
-		title = "Untitled"
-	}
-
 	artist := m.Artist()
 	if artist == "" {
 		artist = "Unknown"
+	}
+
+	title := m.Title()
+	if title == "" {
+		title = "Untitled"
 	}
 
 	album := m.Album()
