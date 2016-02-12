@@ -62,7 +62,7 @@ func main() {
 	}
 
 	if cmd == "serve" {
-		lib, err := OpenLib("./library.json")
+		lib, err := OpenLib(libFile)
 		if err != nil {
 			fmt.Println(err)
 		}
