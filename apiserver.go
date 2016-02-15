@@ -3,54 +3,71 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
-	"path"
+	"strings"
 )
 
+// API holds the Library which is accessed for api reponses.
 type API struct {
 	Library *Library
 }
 
+// endPoints describes api end points.
+var endPoints = map[string]string{
+	"all_artists":   "/artists",
+	"albums":        "/albums",
+	"album_artwork": "/artwork/{track_path}",
+}
+
+// Index responds with a map of api end points.
+func (api *API) Index(w http.ResponseWriter, r *http.Request) {
+	e := json.NewEncoder(w)
+	if err := e.Encode(endPoints); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+	}
+}
+
+// Artists responds with json encoded Library.Artists struct.
 func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
-
-	base := path.Base(r.URL.String())
-	unescapedBase, err := url.QueryUnescape(base)
-	if err != nil {
-		log.Println(err)
+	e := json.NewEncoder(w)
+	if err := e.Encode(api.Library.Artists); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
-	log.Println(unescapedBase)
+}
 
-	var response interface{}
-	if unescapedBase != "artists" {
-		response = api.Library.AlbumsBy(unescapedBase)
-	} else {
-		response = api.Library.Artists
+// Albums reponds with a json encoded Library.Albums struct.
+func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
+	e := json.NewEncoder(w)
+	if err := e.Encode(api.Library.Albums); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
+}
 
-	b, err := json.Marshal(response)
+// Artwork takes the path after /artwork/ and responds with the album
+// cover of the track found at that path.
+func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
+	location := strings.Trim(r.URL.String(), "/artwork/")
+	unescapedLocation, err := url.QueryUnescape(location)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
 
-	w.Write(b)
-}
-
-func (api *API) AllAlbums(w http.ResponseWriter, r *http.Request) {
-	b, err := json.Marshal(api.Library.Albums)
+	art, err := AlbumArt("/" + unescapedLocation)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+		http.Error(w, fmt.Sprintf("no artwork for: %s\n", unescapedLocation), 400)
 	}
 
-	w.Write(b)
+	w.Write(art)
 }
 
+// ServeAPI takes a pointer to a Library and serves the api.
 func ServeAPI(lib *Library) {
-	var api API
-	api.Library = lib
+	api := &API{lib}
 
-	http.HandleFunc("/api/artists/", api.Artists)
-	http.HandleFunc("/api/albums", api.AllAlbums)
+	http.HandleFunc("/", api.Index)
+	http.HandleFunc("/artists", api.Artists)
+	http.HandleFunc("/albums", api.Albums)
+	http.HandleFunc("/artwork/", api.Artwork)
 	http.ListenAndServe(":8080", nil)
 }
