@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -50,6 +51,7 @@ type Track struct {
 // Generate reads all artists, albums and tracks into the Library.
 func Generate(tracks []*Track) *Library {
 	l := new(Library)
+
 	l.Artists = Artists(tracks)
 	l.Albums = Albums(tracks)
 	l.Tracks = tracks
@@ -67,6 +69,38 @@ func (l *Library) AlbumsBy(artist string) []*Album {
 	}
 
 	return albums
+}
+
+// TracksBy returns all tracks by a specific artist.
+func (l *Library) TracksBy(artist string) []*Track {
+	var tracks []*Track
+	for _, track := range l.Tracks {
+		if track.Artist == artist {
+			tracks = append(tracks, track)
+		}
+	}
+
+	return tracks
+}
+
+// AlbumArt takes a path to an audio file and returns the album
+// artwork if found.
+func AlbumArt(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := tag.ReadFrom(f)
+	if err != nil {
+		return nil, err
+	}
+
+	if m.Picture() == nil {
+		return nil, errors.New("No artwork found.")
+	}
+
+	return m.Picture().Data, nil
 }
 
 // Artists returns a slice of unique artists from a slice of Tracks.
