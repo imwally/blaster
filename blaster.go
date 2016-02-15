@@ -3,29 +3,22 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
-const libFile string = "./library.json"
+const libFile = "./library.json"
 
 func OpenLib(path string) (*Library, error) {
-	f, err := os.Open(libFile)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := ioutil.ReadAll(f)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
 	library := new(Library)
-	err = json.Unmarshal(b, &library)
-	if err != nil {
+	if err := json.NewDecoder(f).Decode(&library); err != nil {
 		return nil, err
 	}
-
+	
 	return library, nil
 }
 
@@ -36,28 +29,31 @@ func GenerateLibrary(path string) error {
 	}
 
 	library := Generate(tracks)
-	output, err := json.Marshal(library)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(libFile, output, 0600)
+	f, err := os.Create(libFile)
 	if err != nil {
 		return err
 	}
 
+	if err := json.NewEncoder(f).Encode(library); err != nil {
+		return err
+	}
+		
 	return nil
 }
 
 func main() {
 	if len(os.Args) < 2 {
+		fmt.Printf("%s: no command given.\n", os.Args[0])
 		return
 	}
+	
 	cmd := os.Args[1]
 
 	if cmd == "generate" {
 		err := GenerateLibrary(os.Args[2])
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 	}
 
@@ -65,8 +61,10 @@ func main() {
 		lib, err := OpenLib(libFile)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 
 		ServeAPI(lib)
 	}
+
 }
