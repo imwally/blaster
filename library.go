@@ -83,7 +83,8 @@ func (a ByAlbum) Swap(i, j int) {
 func (l *Library) AlbumsBy(artist string) []*Album {
 	var albums []*Album
 	for _, album := range l.Albums {
-		if album.Artist == artist {
+		artistFound := strings.EqualFold(album.Artist, artist)
+		if artistFound { 
 			albums = append(albums, album)
 		}
 	}
