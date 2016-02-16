@@ -85,7 +85,7 @@ func (l *Library) TracksBy(artist string) []*Track {
 
 // AlbumArt takes a path to an audio file and returns the album
 // artwork if found.
-func AlbumArt(path string) ([]byte, error) {
+func AlbumArt(path string) (*tag.Picture, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func AlbumArt(path string) ([]byte, error) {
 		return nil, errors.New("No artwork found.")
 	}
 
-	return m.Picture().Data, nil
+	return m.Picture(), nil
 }
 
 // Artists returns a slice of unique artists from a slice of Tracks.
