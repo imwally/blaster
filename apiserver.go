@@ -68,22 +68,30 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Artwork takes the path after /artwork/ and responds with the album
-// cover of the track found at that path.
+// Artwork responds with the album cover of the track found at that
+// path after /artwork/.
 func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	trackPath := strings.Trim(r.URL.String(), "/artwork/")
+	trackPath := strings.Replace(r.URL.String(), "/artwork/", "", -1)
 	unescapedTrackPath, err := url.QueryUnescape(trackPath)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+		return
+	}
+
+	if unescapedTrackPath == "" {
+		http.Error(w, fmt.Sprintf("no track path specified.\n"), 400)
+		return
 	}
 
 	art, err := AlbumArt("/" + unescapedTrackPath)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("no artwork for: %s\n", unescapedTrackPath), 400)
+	if err != nil || art == nil {
+		http.Error(w, fmt.Sprintf("no artwork for: /%s\n", unescapedTrackPath), 400)
+		return
 	}
 
-	w.Write(art)
+	w.Header().Set("Content-Type", art.MIMEType)
+	w.Write(art.Data)
 }
 
 // ServeAPI takes a pointer to a Library and serves the api.
