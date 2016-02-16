@@ -30,8 +30,7 @@ func Logger(r *http.Request) {
 // Index responds with a map of api end points.
 func (api *API) Index(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	e := json.NewEncoder(w)
-	if err := e.Encode(endPoints); err != nil {
+	if err := json.NewEncoder(w).Encode(endPoints); err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
 }
@@ -40,8 +39,7 @@ func (api *API) Index(w http.ResponseWriter, r *http.Request) {
 // containing all artists.
 func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	e := json.NewEncoder(w)
-	if err := e.Encode(api.Library.Artists); err != nil {
+	if err := json.NewEncoder(w).Encode(api.Library.Artists); err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
 }
