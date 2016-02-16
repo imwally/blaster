@@ -45,25 +45,38 @@ func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 }
 
 // Albums reponds with a json encoded Library.Albums struct containing
-// all albums. If an artist name procedes the /albums/ path then only
-// albums from that artist will be returned.
+// all albums.
 func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
+	Logger(r)
+	if err := json.NewEncoder(w).Encode(api.Library.Albums); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+	}
+}
+
+// AlbumsBy responds with a json encoded Library.Albums struct
+// containing all albums by the artist specified after the /albums/
+// path (i.e. /albums/Queen).
+func (api *API) AlbumsBy(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	artistName := strings.Replace(r.URL.String(), "/albums/", "", -1)
 	unescapedArtistName, err := url.QueryUnescape(artistName)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+		return
 	}
 
-	var response interface{}
-	if unescapedArtistName != "" {
-		response = api.Library.AlbumsBy(unescapedArtistName)
-	} else {
-		response = api.Library.Albums
+	if unescapedArtistName == "" {
+		http.Error(w, fmt.Sprintf("no artist specified."), 400)
+		return
 	}
 
-	e := json.NewEncoder(w)
-	if err := e.Encode(response); err != nil {
+	response := api.Library.AlbumsBy(unescapedArtistName)
+	if response == nil {
+		http.Error(w, fmt.Sprintf("no artists by the name %s found.\n", unescapedArtistName), 400)
+		return
+	}
+			
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
 }
@@ -102,7 +115,7 @@ func ServeAPI(lib *Library) {
 	http.HandleFunc("/artists", api.Artists)
 	http.HandleFunc("/artists/", api.Artists)
 	http.HandleFunc("/albums", api.Albums)
-	http.HandleFunc("/albums/", api.Albums)
+	http.HandleFunc("/albums/", api.AlbumsBy)
 	http.HandleFunc("/artwork/", api.Artwork)
 
 	log.Println("Blaster API server started on port :8080.")
