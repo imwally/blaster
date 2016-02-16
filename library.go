@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/dhowden/tag"
@@ -48,15 +49,34 @@ type Track struct {
 	Path        string
 }
 
-// Generate reads all artists, albums and tracks into the Library.
-func Generate(tracks []*Track) *Library {
-	l := new(Library)
+// ByArtist satisfies the sort interface to sort artists by name.
+type ByArtist []*Artist
 
-	l.Artists = Artists(tracks)
-	l.Albums = Albums(tracks)
-	l.Tracks = tracks
+func (a ByArtist) Len() int {
+	return len(a)
+}
 
-	return l
+func (a ByArtist) Less(i, j int) bool {
+	return a[i].Name < a[j].Name
+}
+
+func (a ByArtist) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+// ByAlbum satisfies the sort interface to sort albums by title.
+type ByAlbum []*Album
+
+func (a ByAlbum) Len() int {
+	return len(a)
+}
+
+func (a ByAlbum) Less(i, j int) bool {
+	return a[i].Title < a[j].Title
+}
+
+func (a ByAlbum) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
 }
 
 // AlbumsBy returns all albums by a specific artist.
@@ -81,6 +101,23 @@ func (l *Library) TracksBy(artist string) []*Track {
 	}
 
 	return tracks
+}
+
+// Generate reads all artists, albums and tracks into the Library.
+func Generate(tracks []*Track) *Library {
+	l := new(Library)
+
+	artists := Artists(tracks)
+	sort.Sort(ByArtist(artists))
+
+	albums := Albums(tracks)
+	sort.Sort(ByAlbum(albums))
+
+	l.Artists = artists
+	l.Albums = albums
+	l.Tracks = tracks
+
+	return l
 }
 
 // AlbumArt takes a path to an audio file and returns the album
