@@ -216,7 +216,11 @@ func ScanForTracks(path string) ([]*Track, error) {
 			if err != nil {
 				log.Printf("%s: %s", err, path)
 			}
-			track.Path = path
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+			track.Path = absPath
 			tracks = append(tracks, track)
 		}
 
