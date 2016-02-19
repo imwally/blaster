@@ -18,7 +18,9 @@ type API struct {
 var endPoints = map[string]string{
 	"all_artists":   "/artists",
 	"albums":        "/albums{/artist_name}",
+	"album_tracks":  "/albums/{artist_name}/{album_name}",
 	"album_artwork": "/artwork/{track_path}",
+	
 }
 
 // Logger is a helper function that prints HTTP request information to
@@ -58,21 +60,31 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 // path (i.e. /albums/Queen).
 func (api *API) AlbumsBy(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	artistName := strings.Replace(r.URL.String(), "/albums/", "", -1)
-	unescapedArtistName, err := url.QueryUnescape(artistName)
+	query := strings.Replace(r.URL.String(), "/albums/", "", -1)
+	unescapedQuery, err := url.QueryUnescape(query)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 		return
 	}
 
-	if unescapedArtistName == "" {
+	pathSplit := strings.Split(unescapedQuery, "/")
+
+	var artist, album string
+	if len(pathSplit) > 0 {
+		artist = pathSplit[0]
+	}
+	if len(pathSplit) > 1 {
+		album = pathSplit[1]
+	}
+
+	if artist == "" {
 		http.Error(w, fmt.Sprintf("no artist specified."), 400)
 		return
 	}
 
-	response := api.Library.AlbumsBy(unescapedArtistName)
+	response := api.Library.AlbumsBy(artist, album)
 	if response == nil {
-		http.Error(w, fmt.Sprintf("no artists by the name %s found.\n", unescapedArtistName), 400)
+		http.Error(w, fmt.Sprintf("no artists or albums by the name %s found.\n", unescapedQuery), 400)
 		return
 	}
 			
