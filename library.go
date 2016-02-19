@@ -79,29 +79,29 @@ func (a ByAlbum) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-// AlbumsBy returns all albums by a specific artist.
-func (l *Library) AlbumsBy(artist string) []*Album {
+// AlbumsBy returns all albums by a specific artist. If album is
+// specified, only that album will be returned.
+func (l *Library) AlbumsBy(artistName, albumName string) []*Album {
 	var albums []*Album
 	for _, album := range l.Albums {
-		artistFound := strings.EqualFold(album.Artist, artist)
+		artistFound := strings.EqualFold(album.Artist, artistName)
 		if artistFound { 
 			albums = append(albums, album)
 		}
 	}
 
-	return albums
-}
-
-// TracksBy returns all tracks by a specific artist.
-func (l *Library) TracksBy(artist string) []*Track {
-	var tracks []*Track
-	for _, track := range l.Tracks {
-		if track.Artist == artist {
-			tracks = append(tracks, track)
+	var singleAlbum []*Album
+	if albumName != "" {
+		for _, album := range albums {
+			albumFound := strings.EqualFold(album.Title, albumName)
+			if albumFound {
+				singleAlbum = append(singleAlbum, album)
+			}
 		}
+		albums = singleAlbum
 	}
-
-	return tracks
+	
+	return albums
 }
 
 // Generate reads all artists, albums and tracks into the Library.
