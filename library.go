@@ -14,21 +14,9 @@ import (
 
 // Library is the entry point to all artists, albums and tracks.
 type Library struct {
-	Artists []*Artist
-	Albums  []*Album
+	Artists []string
+	Albums  []string
 	Tracks  []*Track
-}
-
-// Artist holds an artist's name.
-type Artist struct {
-	Name string
-}
-
-// Album holds an album's title, artist name, and tracks.
-type Album struct {
-	Title  string
-	Artist string
-	Tracks []*Track
 }
 
 // Track holds the meta data and path to a a track.
@@ -49,59 +37,36 @@ type Track struct {
 	Path        string
 }
 
-// ByArtist satisfies the sort interface to sort artists by name.
-type ByArtist []*Artist
-
-func (a ByArtist) Len() int {
-	return len(a)
-}
-
-func (a ByArtist) Less(i, j int) bool {
-	return a[i].Name < a[j].Name
-}
-
-func (a ByArtist) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-// ByAlbum satisfies the sort interface to sort albums by title.
-type ByAlbum []*Album
-
-func (a ByAlbum) Len() int {
-	return len(a)
-}
-
-func (a ByAlbum) Less(i, j int) bool {
-	return a[i].Title < a[j].Title
-}
-
-func (a ByAlbum) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-// AlbumsBy returns all albums by a specific artist. If album is
-// specified, only that album will be returned.
-func (l *Library) AlbumsBy(artistName, albumName string) []*Album {
-	var albums []*Album
-	for _, album := range l.Albums {
-		artistFound := strings.EqualFold(album.Artist, artistName)
-		if artistFound { 
-			albums = append(albums, album)
+// AlbumsByArtists returns a slice of album titles by an artist.
+func (l *Library) AlbumsByArtist(artist string) []string {
+	albums := make(map[string]int)
+	for _, track := range l.Tracks {
+		artistFound := strings.EqualFold(track.Artist, artist)
+		if artistFound {
+			albums[track.Album] = 0
 		}
 	}
 
-	var singleAlbum []*Album
-	if albumName != "" {
-		for _, album := range albums {
-			albumFound := strings.EqualFold(album.Title, albumName)
-			if albumFound {
-				singleAlbum = append(singleAlbum, album)
-			}
-		}
-		albums = singleAlbum
+	albumsBy := []string{}
+	for album, _ := range albums {
+		albumsBy = append(albumsBy, album)
 	}
-	
-	return albums
+
+	return albumsBy
+}
+
+// TracksByAlbum returns a slice of pointers to Tracks that appear on
+// an album.
+func (l *Library) TracksByAlbum(album string) []*Track {
+	tracks := []*Track{}
+	for _, track := range l.Tracks {
+		albumFound := strings.EqualFold(track.Album, album)
+		if albumFound {
+			tracks = append(tracks, track)
+		}
+	}
+
+	return tracks
 }
 
 // Generate reads all artists, albums and tracks into the Library.
@@ -109,16 +74,47 @@ func Generate(tracks []*Track) *Library {
 	l := new(Library)
 
 	artists := Artists(tracks)
-	sort.Sort(ByArtist(artists))
-
 	albums := Albums(tracks)
-	sort.Sort(ByAlbum(albums))
+	sort.Strings(artists)
+	sort.Strings(albums)
 
 	l.Artists = artists
 	l.Albums = albums
 	l.Tracks = tracks
 
 	return l
+}
+
+// Artists returns a slice of unique artist names from a slice of
+// tracks.
+func Artists(tracks []*Track) []string {
+	uniqueArtists := make(map[string]int)
+	for _, v := range tracks {
+		uniqueArtists[v.Artist] = 0
+	}
+
+	artists := []string{}
+	for artist, _ := range uniqueArtists {
+		artists = append(artists, artist)
+	}
+
+	return artists
+}
+
+// Albums returns a slice of unique album titles from a slice of
+// tracks.
+func Albums(tracks []*Track) []string {
+	uniqueAlbums := make(map[string]int)
+	for _, v := range tracks {
+		uniqueAlbums[v.Album] = 0
+	}
+
+	albums := []string{}
+	for album, _ := range uniqueAlbums {
+		albums = append(albums, album)
+	}
+
+	return albums
 }
 
 // AlbumArt takes a path to an audio file and returns the album
@@ -141,49 +137,9 @@ func AlbumArt(path string) (*tag.Picture, error) {
 	return m.Picture(), nil
 }
 
-// Artists returns a slice of unique artists from a slice of Tracks.
-func Artists(tracks []*Track) []*Artist {
-	artists := make(map[string]*Artist)
-	for _, track := range tracks {
-		artists[track.Artist] = &Artist{
-			Name: track.Artist,
-		}
-	}
-
-	var uniqueArtists []*Artist
-	for _, artist := range artists {
-		uniqueArtists = append(uniqueArtists, artist)
-	}
-
-	return uniqueArtists
-}
-
-// Albums returns a slice of unique albums from a slice of Tracks.
-func Albums(tracks []*Track) []*Album {
-	albums := make(map[string]*Album)
-	albumTracks := make(map[string][]*Track)
-
-	// Add tracks to album
-	for _, track := range tracks {
-		albumTracks[track.Album] = append(albumTracks[track.Album], track)
-		albums[track.Album] = &Album{
-			Title:  track.Album,
-			Artist: track.Artist,
-		}
-		albums[track.Album].Tracks = albumTracks[track.Album]
-	}
-
-	var uniqueAlbums []*Album
-	for _, album := range albums {
-		uniqueAlbums = append(uniqueAlbums, album)
-	}
-
-	return uniqueAlbums
-}
-
 // NewTrack attempts to read the meta data from a file into a Track
-// structure. The string "Unknown" will be used in place of a blank
-// artist name and "Untitled" in place of blank album and track
+// data structure. The string "Unknown" will be used in place of a
+// blank artist name and "Untitled" in place of blank album and track
 // titles.
 func NewTrack(path string) (*Track, error) {
 	f, err := os.Open(path)
@@ -249,7 +205,7 @@ func ScanForTracks(path string) ([]*Track, error) {
 
 		// Skip directories and files with unsupported
 		// extensions.
-		if !info.IsDir() && SupportedExtention(path) {
+		if !info.IsDir() && SupportedExtension(path) {
 			track, err := NewTrack(path)
 			if err != nil {
 				log.Printf("%s: %s", err, path)
@@ -275,7 +231,7 @@ func ScanForTracks(path string) ([]*Track, error) {
 
 // SupportedExtension returns true if the extension of the path is
 // supported.
-func SupportedExtention(path string) bool {
+func SupportedExtension(path string) bool {
 	supported := []string{".mp3", ".mp4", ".m4a", ".flac", ".aac"}
 	for _, supported_ext := range supported {
 		ext := strings.EqualFold(filepath.Ext(path), supported_ext)
