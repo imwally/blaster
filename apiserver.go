@@ -14,13 +14,13 @@ type API struct {
 	Library *Library
 }
 
-// endPoints describes api end points.
+// endPoints describes the api end points.
 var endPoints = map[string]string{
 	"all_artists":   "/artists",
-	"albums":        "/albums{/artist_name}",
-	"album_tracks":  "/albums/{artist_name}/{album_name}",
+	"artist_albums": "/artists/{artist_name}",
+	"all_albums":    "/albums",
+	"album_tracks":  "/albums/{album_name}",
 	"album_artwork": "/artwork/{track_path}",
-	
 }
 
 // Logger is a helper function that prints HTTP request information to
@@ -37,8 +37,7 @@ func (api *API) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Artists responds with a json encoded Library.Artists struct
-// containing all artists.
+// Artists responds with a json encoded array of all artists.
 func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	if err := json.NewEncoder(w).Encode(api.Library.Artists); err != nil {
@@ -46,49 +45,54 @@ func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Albums reponds with a json encoded Library.Albums struct containing
-// all albums.
-func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
+// AlbumsByArtist respondes with a json encoded array of albums by an
+// artist.
+func (api *API) AlbumsByArtist(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	if err := json.NewEncoder(w).Encode(api.Library.Albums); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-	}
-}
-
-// AlbumsBy responds with a json encoded Library.Albums struct
-// containing all albums by the artist specified after the /albums/
-// path (i.e. /albums/Queen).
-func (api *API) AlbumsBy(w http.ResponseWriter, r *http.Request) {
-	Logger(r)
-	query := strings.Replace(r.URL.String(), "/albums/", "", -1)
-	unescapedQuery, err := url.QueryUnescape(query)
+	query := strings.Replace(r.URL.String(), "/artists/", "", -1)
+	unescapedQueryPath, err := url.QueryUnescape(query)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 		return
 	}
 
-	pathSplit := strings.Split(unescapedQuery, "/")
-
-	var artist, album string
-	if len(pathSplit) > 0 {
-		artist = pathSplit[0]
-	}
-	if len(pathSplit) > 1 {
-		album = pathSplit[1]
-	}
-
-	if artist == "" {
+	if unescapedQueryPath == "" {
 		http.Error(w, fmt.Sprintf("no artist specified."), 400)
 		return
 	}
 
-	response := api.Library.AlbumsBy(artist, album)
-	if response == nil {
-		http.Error(w, fmt.Sprintf("no artists or albums by the name %s found.\n", unescapedQuery), 400)
+	albums := api.Library.AlbumsByArtist(unescapedQueryPath)
+	if err := json.NewEncoder(w).Encode(albums); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+	}
+}
+
+// TracksByAlbum respondes with a json encoded array of track objects
+// from an album.
+func (api *API) TracksByAlbum(w http.ResponseWriter, r *http.Request) {
+	Logger(r)
+	query := strings.Replace(r.URL.String(), "/albums/", "", -1)
+	unescapedQueryPath, err := url.QueryUnescape(query)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 		return
 	}
-			
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+
+	if unescapedQueryPath == "" {
+		http.Error(w, fmt.Sprintf("no album specified."), 400)
+		return
+	}
+
+	tracks := api.Library.TracksByAlbum(unescapedQueryPath)
+	if err := json.NewEncoder(w).Encode(tracks); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+	}
+}
+
+// Albums reponds with a json encoded arary of all albums.
+func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
+	Logger(r)
+	if err := json.NewEncoder(w).Encode(api.Library.Albums); err != nil {
 		http.Error(w, fmt.Sprintf("%s\n", err), 400)
 	}
 }
@@ -120,16 +124,16 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeAPI takes a pointer to a Library and serves the api.
-func ServeAPI(lib *Library) {
+func ServeAPI(lib *Library, port string) {
 	api := &API{lib}
 
 	http.HandleFunc("/", api.Index)
 	http.HandleFunc("/artists", api.Artists)
-	http.HandleFunc("/artists/", api.Artists)
+	http.HandleFunc("/artists/", api.AlbumsByArtist)
 	http.HandleFunc("/albums", api.Albums)
-	http.HandleFunc("/albums/", api.AlbumsBy)
+	http.HandleFunc("/albums/", api.TracksByAlbum)
 	http.HandleFunc("/artwork/", api.Artwork)
 
-	log.Println("Blaster API server started on port :8080.")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Printf("Blaster API server started on port :%s.", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
