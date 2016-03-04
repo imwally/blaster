@@ -71,13 +71,12 @@ func (l *Library) TracksByAlbum(album string) []*Track {
 
 // Generate reads all artists, albums and tracks into the Library.
 func Generate(tracks []*Track) *Library {
-	l := new(Library)
-
 	artists := Artists(tracks)
 	albums := Albums(tracks)
 	sort.Strings(artists)
 	sort.Strings(albums)
 
+	l := new(Library)
 	l.Artists = artists
 	l.Albums = albums
 	l.Tracks = tracks
@@ -193,8 +192,8 @@ func NewTrack(path string) (*Track, error) {
 }
 
 // ScanForTracks scans a path for files containing valid meta tag
-// information. Valid meta tag formats are ID3, MP4, and Vorbis. It
-// returns a slice of pointers to a Track.
+// information. Valid meta tag formats are ID3, MP4, FLAC, and
+// Vorbis. It returns a slice of pointers to a Track.
 func ScanForTracks(path string) ([]*Track, error) {
 	var tracks []*Track
 
@@ -232,7 +231,15 @@ func ScanForTracks(path string) ([]*Track, error) {
 // SupportedExtension returns true if the extension of the path is
 // supported.
 func SupportedExtension(path string) bool {
-	supported := []string{".mp3", ".mp4", ".m4a", ".flac", ".aac"}
+	supported := []string{
+		".aac",
+		".flac",
+		".mp3",
+		".m4a",
+		".mp4",
+		".ogg",
+		".ogv",
+	}
 	for _, supported_ext := range supported {
 		ext := strings.EqualFold(filepath.Ext(path), supported_ext)
 		if ext {
