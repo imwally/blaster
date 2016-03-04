@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 // API holds the Library which is accessed for api reponses.
@@ -14,24 +13,18 @@ type API struct {
 	Library *Library
 }
 
-// Artist holds an artist's name.
-type Artist struct {
-	Artist string
-	Albums []string
-}
-
-// Album holds an album's title.
-type Album struct {
-	Album string
+// APIError holds an api error message.
+type APIError struct {
+	Message string
 }
 
 // endPoints describes the available api end points.
 var endPoints = map[string]string{
 	"all_artists":   "/artists",
-	"artist_albums": "/artists/{artist_name}",
 	"all_albums":    "/albums",
-	"album_tracks":  "/albums/{album_name}",
-	"album_artwork": "/artwork/{track_path}",
+	"artist_albums": "/albums?artist={artist_name}",
+	"album_tracks":  "/tracks?album={album_name}",
+	"album_artwork": "/artwork?track={track_path}",
 }
 
 // Logger is a helper function that prints HTTP request information to
@@ -40,112 +33,84 @@ func Logger(r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.Proto, r.RequestURI)
 }
 
+// JsonResponse JSON encodes i and writes the results to w.
+func JsonResponse(w http.ResponseWriter, i interface{}) {
+	if err := json.NewEncoder(w).Encode(i); err != nil {
+		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+	}
+}
+
 // Index responds with a map of api end points.
 func (api *API) Index(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	if err := json.NewEncoder(w).Encode(endPoints); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-	}
+	JsonResponse(w, endPoints)
 }
 
-// Artists responds with a json encoded array of all artists.
+// Artists responds with a JSON encoded array of all artists.
 func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	artists := []Artist{}
-	for _, artist := range api.Library.Artists {
-		newArtist := Artist{
-			Artist: artist,
-		}
-		albums := api.Library.AlbumsByArtist(artist)
-		newArtist.Albums = albums
-		artists = append(artists, newArtist)
-	}
-
-	if err := json.NewEncoder(w).Encode(artists); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-	}
+	JsonResponse(w, api.Library.Artists)
 }
 
-// Albums reponds with a json encoded arary of all albums.
+// Albums responds with a JSON encoded array of all albums or albums
+// by an artists if the artist query is specified.
 func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	albums := []Album{}
-	for _, album := range api.Library.Albums {
-		albums = append(albums, Album{album})
-	}
 
-	if err := json.NewEncoder(w).Encode(albums); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-	}
-}
-
-// AlbumsByArtist respondes with a json encoded array of albums by an
-// artist.
-func (api *API) AlbumsByArtist(w http.ResponseWriter, r *http.Request) {
-	Logger(r)
-	query := strings.Replace(r.URL.String(), "/artists/", "", -1)
-	unescapedQueryPath, err := url.QueryUnescape(query)
+	q, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+		log.Println(err)
+	}
+
+	if len(q) == 0 {
+		JsonResponse(w, api.Library.Albums)
 		return
 	}
 
-	if unescapedQueryPath == "" {
-		http.Error(w, fmt.Sprintf("no artist specified."), 400)
+	artist := q.Get("artist")
+	albums := api.Library.AlbumsByArtist(artist)
+	if len(albums) > 0 {
+		JsonResponse(w, api.Library.AlbumsByArtist(artist))
 		return
 	}
 
-	albums := []Album{}
-	for _, album := range api.Library.AlbumsByArtist(unescapedQueryPath) {
-		albums = append(albums, Album{album})
-	}
-
-	if err := json.NewEncoder(w).Encode(albums); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-	}
+	JsonResponse(w, APIError{"no albums found"})
 }
 
-// TracksByAlbum respondes with a json encoded array of track objects
-// from an album.
-func (api *API) TracksByAlbum(w http.ResponseWriter, r *http.Request) {
+// Tracks responds with a JSON encoded array of tracks by an album.
+func (api *API) Tracks(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	query := strings.Replace(r.URL.String(), "/albums/", "", -1)
-	unescapedQueryPath, err := url.QueryUnescape(query)
+
+	q, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-		return
+		log.Println(err)
 	}
 
-	if unescapedQueryPath == "" {
-		http.Error(w, fmt.Sprintf("no album specified."), 400)
-		return
+	album := q.Get("album")
+	if len(album) > 0 {
+		tracks := api.Library.TracksByAlbum(album)
+		if len(tracks) != 0 {
+			JsonResponse(w, tracks)
+			return
+		}
 	}
 
-	tracks := api.Library.TracksByAlbum(unescapedQueryPath)
-	if err := json.NewEncoder(w).Encode(tracks); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-	}
+	JsonResponse(w, APIError{"no tracks found"})
 }
 
-// Artwork responds with the album cover of the track found at that
-// path after /artwork/.
+// Artwork responds with the album cover of a track.
 func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	trackPath := strings.Replace(r.URL.String(), "/artwork/", "", -1)
-	unescapedTrackPath, err := url.QueryUnescape(trackPath)
+
+	q, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
-		return
+		log.Println(err)
 	}
 
-	if unescapedTrackPath == "" {
-		http.Error(w, fmt.Sprintf("no track path specified.\n"), 400)
-		return
-	}
-
-	art, err := AlbumArt("/" + unescapedTrackPath)
+	track := q.Get("track")
+	art, err := AlbumArt(track)
 	if err != nil || art == nil {
-		http.Error(w, fmt.Sprintf("no artwork for: /%s\n", unescapedTrackPath), 400)
+		JsonResponse(w, APIError{"no artwork found"})
 		return
 	}
 
@@ -156,10 +121,10 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 // addCORSHeader is a wrapper function that enables Cross Origin
 // Resource Sharing if set is true. It does this by setting the
 // Access-Control-Allow-Origin header to the specified origin.
-func addCORSHeader(set bool, fn http.HandlerFunc) http.HandlerFunc {
+func addCORSHeader(set bool, origin string, fn http.HandlerFunc) http.HandlerFunc {
 	if set {
 		return func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:8081")
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 			fn(w, r)
 		}
 	}
@@ -167,15 +132,14 @@ func addCORSHeader(set bool, fn http.HandlerFunc) http.HandlerFunc {
 }
 
 // ServeAPI takes a pointer to a Library and serves the api.
-func ServeAPI(lib *Library, port string, setCORS bool) {
+func ServeAPI(lib *Library, port string, setCORS bool, origin string) {
 	api := &API{lib}
 
-	http.HandleFunc("/", addCORSHeader(setCORS, api.Index))
-	http.HandleFunc("/artists", addCORSHeader(setCORS, api.Artists))
-	http.HandleFunc("/artists/", addCORSHeader(setCORS, api.AlbumsByArtist))
-	http.HandleFunc("/albums", addCORSHeader(setCORS, api.Albums))
-	http.HandleFunc("/albums/", addCORSHeader(setCORS, api.TracksByAlbum))
-	http.HandleFunc("/artwork/", addCORSHeader(setCORS, api.Artwork))
+	http.HandleFunc("/", addCORSHeader(setCORS, origin, api.Index))
+	http.HandleFunc("/artists", addCORSHeader(setCORS, origin, api.Artists))
+	http.HandleFunc("/albums", addCORSHeader(setCORS, origin, api.Albums))
+	http.HandleFunc("/tracks", addCORSHeader(setCORS, origin, api.Tracks))
+	http.HandleFunc("/artwork", addCORSHeader(setCORS, origin, api.Artwork))
 
 	log.Printf("Blaster API server started on port :%s.", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
