@@ -33,10 +33,10 @@ func Logger(r *http.Request) {
 	log.Println(r.RemoteAddr, r.Method, r.Proto, r.RequestURI)
 }
 
-// JsonResponse JSON encodes i and writes the results to w.
-func JsonResponse(w http.ResponseWriter, i interface{}) {
+// JSONResponse JSON encodes i and writes the results to w.
+func JSONResponse(w http.ResponseWriter, i interface{}) {
 	if err := json.NewEncoder(w).Encode(i); err != nil {
-		JsonResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{err.Error()})
 		return
 	}
 }
@@ -55,13 +55,13 @@ func GetQuery(u string) (url.Values, error) {
 // Index responds with a map of api end points.
 func (api *API) Index(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	JsonResponse(w, endPoints)
+	JSONResponse(w, endPoints)
 }
 
 // Artists responds with a JSON encoded array of all artists.
 func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-	JsonResponse(w, api.Library.Artists)
+	JSONResponse(w, api.Library.Artists)
 }
 
 // Albums responds with a JSON encoded array of all albums or albums
@@ -70,22 +70,22 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		JsonResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{err.Error()})
 	}
 
 	if len(q) == 0 {
-		JsonResponse(w, api.Library.Albums)
+		JSONResponse(w, api.Library.Albums)
 		return
 	}
 
 	artist := q.Get("artist")
 	albums := api.Library.AlbumsByArtist(artist)
 	if len(albums) > 0 {
-		JsonResponse(w, api.Library.AlbumsByArtist(artist))
+		JSONResponse(w, api.Library.AlbumsByArtist(artist))
 		return
 	}
 
-	JsonResponse(w, APIError{"no albums found"})
+	JSONResponse(w, APIError{"no albums found"})
 }
 
 // Tracks responds with a JSON encoded array of tracks by an album.
@@ -93,19 +93,19 @@ func (api *API) Tracks(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		JsonResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{err.Error()})
 	}
 
 	album := q.Get("album")
 	if len(album) > 0 {
 		tracks := api.Library.TracksByAlbum(album)
 		if len(tracks) != 0 {
-			JsonResponse(w, tracks)
+			JSONResponse(w, tracks)
 			return
 		}
 	}
 
-	JsonResponse(w, APIError{"no tracks found"})
+	JSONResponse(w, APIError{"no tracks found"})
 }
 
 // Artwork responds with the album cover of a track.
@@ -113,13 +113,13 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		JsonResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{err.Error()})
 	}
 
 	track := q.Get("track")
 	art, err := AlbumArt(track)
 	if err != nil || art == nil {
-		JsonResponse(w, APIError{"no artwork found"})
+		JSONResponse(w, APIError{"no artwork found"})
 		return
 	}
 
