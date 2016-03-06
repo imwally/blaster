@@ -2,16 +2,20 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 )
 
 const libName = "blaster.json"
-const usage = `Usage: blaster [command]
+const usage = `Usage: blaster [command] [options]
     
 Commands:
     generate PATH              Generate a new library from a music path.
     serve PATH PORT            Serve HTTP API server on PORT.
+
+Options:
+    -origin                    The origin used in the Access-Control-Allow-Origin header.
 
 Examples:
 
@@ -21,7 +25,7 @@ Examples:
 
     Serve an HTTP API server on port 8080.
    
-        $ serve ~/Music/blaser.json 8080 
+        $ serve ~/Music/blaser.json 8080 -origin "http://127.0.0.1:8081"
 `
 
 // OpenLib takes a path to a JSON encoded music library and returns a
@@ -89,12 +93,16 @@ func main() {
 		return
 	}
 
+	var options = flag.NewFlagSet("", flag.ExitOnError)
+	var originFlag = options.String("origin", "", "the origin used in the Access-Control-Allow-Origin header")
+
 	if cmd == "serve" {
 		if len(os.Args) < 4 {
 			fmt.Printf("%s: not enough arguments.\n", app)
 			fmt.Println(usage)
 			return
 		}
+
 		libPath := os.Args[2]
 		port := os.Args[3]
 		lib, err := OpenLib(libPath)
@@ -103,7 +111,8 @@ func main() {
 			return
 		}
 
-		ServeAPI(lib, port, true)
+		options.Parse(os.Args[4:])
+		ServeAPI(lib, port, true, *originFlag)
 		return
 	}
 
