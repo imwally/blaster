@@ -37,7 +37,7 @@ type Track struct {
 	Path        string
 }
 
-// AlbumsByArtists returns a slice of album titles by an artist.
+// AlbumsByArtist returns a slice of album titles by an artist.
 func (l *Library) AlbumsByArtist(artist string) []string {
 	albums := make(map[string]int)
 	for _, track := range l.Tracks {
@@ -48,7 +48,7 @@ func (l *Library) AlbumsByArtist(artist string) []string {
 	}
 
 	albumsBy := []string{}
-	for album, _ := range albums {
+	for album := range albums {
 		albumsBy = append(albumsBy, album)
 	}
 
@@ -93,7 +93,7 @@ func Artists(tracks []*Track) []string {
 	}
 
 	artists := []string{}
-	for artist, _ := range uniqueArtists {
+	for artist := range uniqueArtists {
 		artists = append(artists, artist)
 	}
 
@@ -109,7 +109,7 @@ func Albums(tracks []*Track) []string {
 	}
 
 	albums := []string{}
-	for album, _ := range uniqueAlbums {
+	for album := range uniqueAlbums {
 		albums = append(albums, album)
 	}
 
@@ -240,8 +240,8 @@ func SupportedExtension(path string) bool {
 		".ogg",
 		".ogv",
 	}
-	for _, supported_ext := range supported {
-		ext := strings.EqualFold(filepath.Ext(path), supported_ext)
+	for _, supportedExt := range supported {
+		ext := strings.EqualFold(filepath.Ext(path), supportedExt)
 		if ext {
 			return true
 		}
