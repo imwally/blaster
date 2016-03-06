@@ -29,22 +29,22 @@ Examples:
 
 ## HTTP End Points
 
-*/artists*
+`/artists`
 
 All artists.
 
-*/albums*
+`/albums`
 
 All albums.
 
-*/albums?artist={artist}*
+`/albums?artist={artist}`
 
 Albums by an artists.
 
-*/tracks?album={album}*
+`/tracks?album={album}`
 
 Tracks from an album.
 
-*/artwork?track={path}*
+`/artwork?track={path}`
 
 Album artwork for a specific track.
