@@ -2,13 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"net/url"
 )
 
-// API holds the Library which is accessed for api reponses.
+// API holds the main entry point into the library.
 type API struct {
 	Library *Library
 }
@@ -36,8 +36,20 @@ func Logger(r *http.Request) {
 // JsonResponse JSON encodes i and writes the results to w.
 func JsonResponse(w http.ResponseWriter, i interface{}) {
 	if err := json.NewEncoder(w).Encode(i); err != nil {
-		http.Error(w, fmt.Sprintf("%s\n", err), 400)
+		JsonResponse(w, APIError{err.Error()})
+		return
 	}
+}
+
+// GetQuery unescapes and parses a URL query. If successful it returns
+// the map of queries as url.Values.
+func GetQuery(u string) (url.Values, error) {
+	q, err := url.ParseQuery(html.UnescapeString(u))
+	if err != nil {
+		return nil, err
+	}
+
+	return q, nil
 }
 
 // Index responds with a map of api end points.
@@ -56,10 +68,9 @@ func (api *API) Artists(w http.ResponseWriter, r *http.Request) {
 // by an artists if the artist query is specified.
 func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-
-	q, err := url.ParseQuery(r.URL.RawQuery)
+	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		log.Println(err)
+		JsonResponse(w, APIError{err.Error()})
 	}
 
 	if len(q) == 0 {
@@ -80,10 +91,9 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 // Tracks responds with a JSON encoded array of tracks by an album.
 func (api *API) Tracks(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-
-	q, err := url.ParseQuery(r.URL.RawQuery)
+	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		log.Println(err)
+		JsonResponse(w, APIError{err.Error()})
 	}
 
 	album := q.Get("album")
@@ -101,10 +111,9 @@ func (api *API) Tracks(w http.ResponseWriter, r *http.Request) {
 // Artwork responds with the album cover of a track.
 func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
-
-	q, err := url.ParseQuery(r.URL.RawQuery)
+	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		log.Println(err)
+		JsonResponse(w, APIError{err.Error()})
 	}
 
 	track := q.Get("track")
@@ -141,6 +150,6 @@ func ServeAPI(lib *Library, port string, setCORS bool, origin string) {
 	http.HandleFunc("/tracks", addCORSHeader(setCORS, origin, api.Tracks))
 	http.HandleFunc("/artwork", addCORSHeader(setCORS, origin, api.Artwork))
 
-	log.Printf("Blaster API server started on port :%s.", port)
+	log.Printf("Blaster API server started on port %s.", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
