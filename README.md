@@ -39,7 +39,7 @@ All albums.
 
 `/albums?artist={artist}`
 
-Albums by an artists.
+Albums by an artist.
 
 `/tracks?album={album}`
 
