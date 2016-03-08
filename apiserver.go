@@ -131,13 +131,14 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 // Resource Sharing if set is true. It does this by setting the
 // Access-Control-Allow-Origin header to the specified origin.
 func addCORSHeader(set bool, origin string, fn http.HandlerFunc) http.HandlerFunc {
-	if set {
-		return func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			fn(w, r)
-		}
+	if !set {
+		return func(w http.ResponseWriter, r *http.Request) {}
 	}
-	return func(w http.ResponseWriter, r *http.Request) {}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		fn(w, r)
+	}
 }
 
 // ServeAPI takes a pointer to a Library and serves the api.
