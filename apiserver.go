@@ -72,6 +72,7 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
 		JSONResponse(w, APIError{"error", err.Error()})
+		return
 	}
 
 	if len(q) == 0 {
@@ -95,6 +96,7 @@ func (api *API) Tracks(w http.ResponseWriter, r *http.Request) {
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
 		JSONResponse(w, APIError{"error", err.Error()})
+		return
 	}
 
 	album := q.Get("album")
@@ -113,6 +115,7 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
 		JSONResponse(w, APIError{"error", err.Error()})
+		return
 	}
 
 	track := q.Get("track")
