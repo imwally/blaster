@@ -19,7 +19,9 @@ Options:
 
 Examples:
 
-    Create a new blaster.json library in your ~/Music directory.
+    Create a new library containing all the tracks found in your
+    ~/Music directory. A new file named blaster.json will be created
+    in the same directory.
    
         $ generate ~/Music           
 
