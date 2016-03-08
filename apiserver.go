@@ -15,6 +15,7 @@ type API struct {
 
 // APIError holds an api error message.
 type APIError struct {
+	Status  string
 	Message string
 }
 
@@ -36,7 +37,7 @@ func Logger(r *http.Request) {
 // JSONResponse JSON encodes i and writes the results to w.
 func JSONResponse(w http.ResponseWriter, i interface{}) {
 	if err := json.NewEncoder(w).Encode(i); err != nil {
-		JSONResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{"error", err.Error()})
 		return
 	}
 }
@@ -70,7 +71,7 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		JSONResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{"error", err.Error()})
 	}
 
 	if len(q) == 0 {
@@ -81,11 +82,11 @@ func (api *API) Albums(w http.ResponseWriter, r *http.Request) {
 	artist := q.Get("artist")
 	albums := api.Library.AlbumsByArtist(artist)
 	if len(albums) > 0 {
-		JSONResponse(w, api.Library.AlbumsByArtist(artist))
+		JSONResponse(w, albums)
 		return
 	}
 
-	JSONResponse(w, APIError{"no albums found"})
+	JSONResponse(w, APIError{"error", "no albums found"})
 }
 
 // Tracks responds with a JSON encoded array of tracks by an album.
@@ -113,13 +114,13 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		JSONResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{"error", err.Error()})
 	}
 
 	track := q.Get("track")
 	art, err := AlbumArt(track)
 	if err != nil || art == nil {
-		JSONResponse(w, APIError{"no artwork found"})
+		JSONResponse(w, APIError{"error", "no artwork found"})
 		return
 	}
 
