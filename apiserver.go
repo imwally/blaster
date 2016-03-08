@@ -94,19 +94,17 @@ func (api *API) Tracks(w http.ResponseWriter, r *http.Request) {
 	Logger(r)
 	q, err := GetQuery(r.URL.RawQuery)
 	if err != nil {
-		JSONResponse(w, APIError{err.Error()})
+		JSONResponse(w, APIError{"error", err.Error()})
 	}
 
 	album := q.Get("album")
-	if len(album) > 0 {
-		tracks := api.Library.TracksByAlbum(album)
-		if len(tracks) != 0 {
-			JSONResponse(w, tracks)
-			return
-		}
+	tracks := api.Library.TracksByAlbum(album)
+	if len(tracks) != 0 {
+		JSONResponse(w, tracks)
+		return
 	}
 
-	JSONResponse(w, APIError{"no tracks found"})
+	JSONResponse(w, APIError{"error", "no tracks found"})
 }
 
 // Artwork responds with the album cover of a track.
