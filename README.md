@@ -10,21 +10,24 @@ through a RESTful API. The end points are described below.
 Usage: blaster [command] [options]
     
 Commands:
-    generate PATH              Generate a new library from a music path.
-    serve PATH PORT            Serve HTTP API server on PORT.
+    generate PATH        Generate a new library from a music path.
+    serve PATH           Serve the blaster library as an HTTP API sever.
 
 Options:
-    -origin                    The origin used in the Access-Control-Allow-Origin header.
+    -port                The port the HTTP server should bind to. Default is 8080.
+    -origin              The origin used in the Access-Control-Allow-Origin header.
 
 Examples:
 
-    Create a new blaster.json library in your ~/Music directory.
+    Create a new library containing all the tracks found in your
+    ~/Music directory. A new file named blaster.json will be created
+    in the same directory.
    
-        $ generate ~/Music
+        $ generate ~/Music           
 
-    Serve an HTTP API server on port 8080.
+    Serve an HTTP API server on port 8081.
    
-        $ serve ~/Music/blaser.json 8080 -origin "http://127.0.0.1:8081"
+        $ serve ~/Music/blaser.json -port 8081 -origin "http://127.0.0.1:8081"
 ```
 
 ## HTTP End Points
