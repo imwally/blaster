@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 const libName = "blaster.json"
@@ -61,6 +62,14 @@ func GenerateLibrary(musicPath string) error {
 	if err != nil {
 		return err
 	}
+
+	// Add music path to library. This path is used in the API
+	// server to serve the audio files.
+	absPath, err := filepath.Abs(musicPath)
+	if err != nil {
+		return err
+	}
+	library.Path = absPath
 
 	if err := json.NewEncoder(f).Encode(library); err != nil {
 		return err
