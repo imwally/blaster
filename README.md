@@ -28,7 +28,7 @@ Examples:
     Serve an HTTP API server on port 8080 allowing requests from
     http://127.0.0.1:8081.
    
-        $ serve ~/Music/blaser.json -origin "http://127.0.0.1:8081
+        $ serve ~/Music/blaser.json -origin "http://127.0.0.1:8081"
 ```
 
 ## HTTP End Points
