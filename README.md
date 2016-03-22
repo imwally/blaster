@@ -49,6 +49,10 @@ Albums by an artist.
 
 Tracks from an album.
 
-`/artwork?track={path}`
+`/artwork?track={track_path}`
 
 Album artwork for a specific track.
+
+`/file/{track_path}`
+
+Serve the audio file at {track_path}.
