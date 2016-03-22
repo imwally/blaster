@@ -17,6 +17,7 @@ type Library struct {
 	Artists []string
 	Albums  []string
 	Tracks  []*Track
+	Path    string
 }
 
 // Track holds the meta data and path to a a track.
