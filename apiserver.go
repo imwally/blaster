@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // API holds the main entry point into the library.
@@ -26,6 +27,7 @@ var endPoints = map[string]string{
 	"artist_albums": "/albums?artist={artist_name}",
 	"album_tracks":  "/tracks?album={album_name}",
 	"album_artwork": "/artwork?track={track_path}",
+	"audio_file":    "/file/{track_path}",
 }
 
 // Logger is a helper function that prints HTTP request information to
@@ -129,6 +131,23 @@ func (api *API) Artwork(w http.ResponseWriter, r *http.Request) {
 	w.Write(art.Data)
 }
 
+// ServeAudio serve's the audio file specified in the path after
+// /file. It expects the path after /file to begin with the location
+// where the music library was generated
+// (i.e. /file/home/user/Music/artist/album/song.mp3). After /file is
+// stripped the remaining path is passed to http.ServeFile.
+func (api *API) ServeAudio(w http.ResponseWriter, r *http.Request) {
+	Logger(r)
+
+	track := strings.TrimPrefix(r.URL.String(), "/file"+api.Library.Path)
+	track1, err := url.QueryUnescape(track)
+	if err != nil {
+		JSONResponse(w, APIError{"error", err.Error()})
+	}
+
+	http.ServeFile(w, r, api.Library.Path+track1)
+}
+
 // addCORSHeader is a wrapper function that enables Cross Origin
 // Resource Sharing if set is true. It does this by setting the
 // Access-Control-Allow-Origin header to the specified origin.
@@ -152,6 +171,7 @@ func ServeAPI(lib *Library, port string, setCORS bool, origin string) {
 	http.HandleFunc("/albums", addCORSHeader(setCORS, origin, api.Albums))
 	http.HandleFunc("/tracks", addCORSHeader(setCORS, origin, api.Tracks))
 	http.HandleFunc("/artwork", addCORSHeader(setCORS, origin, api.Artwork))
+	http.HandleFunc("/file/", addCORSHeader(setCORS, origin, api.ServeAudio))
 
 	log.Printf("Blaster API server started on port %s.", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
