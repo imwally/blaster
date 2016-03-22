@@ -28,9 +28,10 @@ Examples:
    
         $ generate ~/Music           
 
-    Serve an HTTP API server on port 8081.
+    Serve an HTTP API server on port 8080 allowing requests from
+    http://127.0.0.1:8081.
    
-        $ serve ~/Music/blaser.json -port 8081 -origin "http://127.0.0.1:8081"
+        $ serve ~/Music/blaser.json -origin "http://127.0.0.1:8081"
 `
 
 // OpenLib takes a path to a JSON encoded music library and returns a
