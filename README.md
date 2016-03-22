@@ -23,11 +23,12 @@ Examples:
     ~/Music directory. A new file named blaster.json will be created
     in the same directory.
    
-        $ generate ~/Music           
+	    $ generate ~/Music
 
-    Serve an HTTP API server on port 8081.
+    Serve an HTTP API server on port 8080 allowing requests from
+    http://127.0.0.1:8081.
    
-        $ serve ~/Music/blaser.json -port 8081 -origin "http://127.0.0.1:8081"
+        $ serve ~/Music/blaser.json -origin "http://127.0.0.1:8081
 ```
 
 ## HTTP End Points
